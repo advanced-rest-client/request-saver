@@ -1,0 +1,114 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <link rel="import" href="../request-saver.html">
+  </head>
+  <body>
+
+    <test-fixture id="basic">
+      <template>
+        <request-saver></request-saver>
+      </template>
+    </test-fixture>
+
+    <script>
+    /* global fixture, assert, sinon */
+    suite('Create project', function() {
+      var element;
+      var createdId;
+      var createdRev;
+      setup(function() {
+        element = fixture('basic');
+      });
+
+      function db() {
+        return new PouchDB('legacy-projects');
+      }
+
+      teardown(function() {
+        if (createdId) {
+          return db().remove(createdId, createdRev);
+        }
+      });
+      test('Rejects promise if name is not set', function() {
+        return element.createLegacyProject()
+        .then(() => {
+          throw new Error('TEST');
+        })
+        .catch(err => {
+          assert.notEqual(err.message, 'TEST');
+        });
+      });
+
+      function setCreatedData(result) {
+        createdId = result._id;
+        createdRev = result._rev;
+      }
+
+      test('Creates project object', function() {
+        return element.createLegacyProject('test')
+        .then(result => {
+          setCreatedData(result);
+        });
+      });
+
+      test('Autogenerates the ID', function() {
+        return element.createLegacyProject('test')
+        .then(result => {
+          setCreatedData(result);
+          assert.typeOf(result._id, 'string');
+        });
+      });
+
+      test('Has name set', function() {
+        return element.createLegacyProject('test')
+        .then(result => {
+          setCreatedData(result);
+          assert.equal(result.name, 'test');
+        });
+      });
+
+      test('Fires project-object-changed custom event', function() {
+        var spy = sinon.spy();
+        element.addEventListener('project-object-changed', spy);
+        return element.createLegacyProject('test')
+        .then(result => {
+          setCreatedData(result);
+          assert.isTrue(spy.calledOnce);
+        });
+      });
+
+      test('project-object-changed contains project property', function() {
+        var eventProject;
+        var callback = function(e) {
+          element.removeEventListener('project-object-changed', callback);
+          eventProject = e.detail.project;
+        };
+        element.addEventListener('project-object-changed', callback);
+        return element.createLegacyProject('test')
+        .then(result => {
+          setCreatedData(result);
+          assert.typeOf(eventProject, 'object', 'Project is an object');
+          assert.ok(eventProject._id, 'Project has _id');
+          assert.ok(eventProject._rev, 'Project has _rev');
+        });
+      });
+    });
+    </script>
+
+  </body>
+</html>

@@ -1,0 +1,205 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <link rel="import" href="../request-saver.html">
+  </head>
+  <body>
+
+    <test-fixture id="basic">
+      <template>
+        <request-saver></request-saver>
+      </template>
+    </test-fixture>
+
+    <script>
+    /* global fixture, assert */
+    suite('Override request', function() {
+      var element;
+      var createdId;
+      var createdRev;
+      var createdRequest;
+
+      const requestName = 'name test';
+      const url = 'test url';
+      const method = 'GET';
+      const project = 'test-project';
+      const headers = 'x-test: x-value';
+      const newHeaders = 'x-headers';
+
+      function db() {
+        return new PouchDB('saved-requests');
+      }
+
+      function dbProjects() {
+        return new PouchDB('legacy-projects');
+      }
+
+      function createRequestObject(includeProject) {
+        var _project = includeProject ? project : undefined;
+        var id = element._createRequestId(requestName, url, method, _project);
+        var data = {
+          _id: id + '/' + Date.now(),
+          name: requestName,
+          url: url,
+          method: method,
+          headers: headers
+        };
+        if (includeProject) {
+          data.legacyProject = project;
+        }
+        return db().put(data)
+        .then(result => {
+          createdId = result.id;
+          createdRev = result.rev;
+          createdRequest = data;
+          createdRequest._id = createdId;
+          createdRequest._rev = createdRev;
+        });
+      }
+
+      suite('Without project', function() {
+        setup(function() {
+          element = fixture('basic');
+          return createRequestObject();
+        });
+
+        teardown(function() {
+          if (createdId) {
+            return db().remove(createdId, createdRev);
+          }
+        });
+
+        suiteTeardown(function() {
+          return db().destroy();
+        });
+
+        test('Updates the object', function() {
+          const copy = Object.assign({}, createdRequest);
+          copy.headers = newHeaders;
+          return element.overrideRequest(copy)
+          .then(result => {
+            assert.equal(result.headers, newHeaders);
+            createdRev = result._rev;
+          });
+        });
+
+        test('Updates the object without changing ID', function() {
+          const origId = createdId;
+          const copy = Object.assign({}, createdRequest);
+          copy.headers = newHeaders;
+          return element.overrideRequest(copy)
+          .then(result => {
+            assert.equal(result._id, origId);
+            createdRev = result._rev;
+          });
+        });
+
+        test('Updates ID for name change', function() {
+          const origId = createdId;
+          const copy = Object.assign({}, createdRequest);
+          const newName = copy.name = 'updated';
+          return element.overrideRequest(copy)
+          .then(result => {
+            assert.notEqual(result._id, origId);
+            assert.equal(result.name, newName, 'Has new name');
+            assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
+            createdId = result._id;
+            createdRev = result._rev;
+          });
+        });
+
+        test('Updates ID for method change', function() {
+          const origId = createdId;
+          const copy = Object.assign({}, createdRequest);
+          copy.method = 'HEAD';
+          return element.overrideRequest(copy)
+          .then(result => {
+            assert.notEqual(result._id, origId, 'Has new ID');
+            assert.equal(result.method, 'HEAD', 'Has new method');
+            assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
+            createdId = result._id;
+            createdRev = result._rev;
+          });
+        });
+
+        test('Updates ID for URL change', function() {
+          const origId = createdId;
+          const copy = Object.assign({}, createdRequest);
+          const newUrl = copy.url = 'http://mulesoft.com';
+          return element.overrideRequest(copy)
+          .then(result => {
+            assert.notEqual(result._id, origId, 'Has new ID');
+            assert.equal(result.url, newUrl, 'Has new url');
+            assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
+            createdId = result._id;
+            createdRev = result._rev;
+          });
+        });
+      });
+
+      suite('With project', function() {
+        setup(function() {
+          element = fixture('basic');
+          return createRequestObject(true);
+        });
+
+        teardown(function() {
+          if (createdId) {
+            return db().remove(createdId, createdRev);
+          }
+        });
+
+        suiteTeardown(function() {
+          return db().destroy()
+          .then(() => dbProjects().destroy());
+        });
+
+        test('Updates ID for project change', function() {
+          const origId = createdId;
+          const copy = Object.assign({}, createdRequest);
+          const opts = {
+            projectId: 'new-project'
+          };
+          return element.overrideRequest(copy, opts)
+          .then(result => {
+            assert.notEqual(result._id, origId, 'Has new ID');
+            assert.equal(result.legacyProject, opts.projectId, 'Has new project ID');
+            assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
+            createdId = result._id;
+            createdRev = result._rev;
+          });
+        });
+
+        test('Updates ID for project removal', function() {
+          const origId = createdId;
+          const copy = Object.assign({}, createdRequest);
+          const opts = {};
+          return element.overrideRequest(copy, opts)
+          .then(result => {
+            assert.notEqual(result._id, origId, 'Has new ID');
+            assert.isUndefined(result.legacyProject, 'Project ID is cleared');
+            assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
+            createdId = result._id;
+            createdRev = result._rev;
+          });
+        });
+      });
+    });
+    </script>
+
+  </body>
+</html>

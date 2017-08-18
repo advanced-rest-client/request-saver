@@ -1,0 +1,149 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <link rel="import" href="../request-saver.html">
+  </head>
+  <body>
+
+    <test-fixture id="basic">
+      <template>
+        <request-saver></request-saver>
+      </template>
+    </test-fixture>
+
+    <script>
+    /* global fixture, assert, sinon */
+    const requestName = 'name test';
+    const url = 'test url';
+    const method = 'GET';
+    const project = 'test-project';
+
+    suite('_createRequestId()', function() {
+      var element;
+      setup(function() {
+        element = fixture('basic');
+      });
+
+      test('creates request ID', function() {
+        var id = element._createRequestId(requestName, url, method);
+        assert.typeOf(id, 'string');
+      });
+
+      test('ID has 3 parts', function() {
+        var id = element._createRequestId(requestName, url, method);
+        var parts = id.split('/');
+        assert.lengthOf(parts, 3);
+      });
+
+      test('Parts are url encoded', function() {
+        var id = element._createRequestId(requestName, url, method);
+        var parts = id.split('/');
+        assert.equal(parts[0].indexOf(' '), -1);
+      });
+
+      test('ID has 4 parts with project', function() {
+        var id = element._createRequestId(requestName, url, method, project);
+        var parts = id.split('/');
+        assert.lengthOf(parts, 4);
+      });
+
+      test('There is not "undefined" in the id', function() {
+        var id = element._createRequestId(requestName, url, method, project);
+        assert.equal(id.indexOf('undefined'), -1);
+      });
+    });
+
+    function db() {
+      return new PouchDB('saved-requests');
+    }
+
+    suite('deleteRequest()', function() {
+      var element;
+      var createdId;
+      var createdRev;
+      setup(function() {
+        element = fixture('basic');
+        var data = {
+          _id: element._createRequestId(requestName, url, method) + Date.now(),
+          name: requestName,
+          url: url,
+          method: method
+        };
+        return db().put(data)
+        .then(result => {
+          createdId = result.id;
+          createdRev = result.rev;
+        });
+      });
+
+      test('Should delete the request', function() {
+        return element.deleteRequest(createdId);
+      });
+
+      test('Fires request-object-deleted custom event', function() {
+        var spy = sinon.spy();
+        element.addEventListener('request-object-deleted', spy);
+        return element.deleteRequest(createdId)
+        .then(() => {
+          assert.isTrue(spy.calledOnce);
+        });
+      });
+
+      test('request-object-deleted custom event contains ID', function() {
+        var eventData;
+        var callback = function(e) {
+          element.removeEventListener('request-object-deleted', callback);
+          eventData = e.detail.id;
+        };
+        element.addEventListener('request-object-deleted', callback);
+        return element.deleteRequest(createdId)
+        .then(() => {
+          assert.equal(eventData, createdId);
+        });
+      });
+
+      test('request-object-deleted custom event contains rev', function() {
+        var eventData;
+        var callback = function(e) {
+          element.removeEventListener('request-object-deleted', callback);
+          eventData = e.detail.rev;
+        };
+        element.addEventListener('request-object-deleted', callback);
+        return element.deleteRequest(createdId)
+        .then(() => {
+          assert.typeOf(eventData, 'string');
+          assert.notEqual(eventData, createdRev);
+        });
+      });
+
+      test('request-object-deleted custom event contains oldRev', function() {
+        var eventData;
+        var callback = function(e) {
+          element.removeEventListener('request-object-deleted', callback);
+          eventData = e.detail.oldRev;
+        };
+        element.addEventListener('request-object-deleted', callback);
+        return element.deleteRequest(createdId)
+        .then(() => {
+          assert.equal(eventData, createdRev);
+        });
+      });
+    });
+    </script>
+
+  </body>
+</html>

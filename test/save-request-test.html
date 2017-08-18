@@ -1,0 +1,486 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <link rel="import" href="../request-saver.html">
+  </head>
+  <body>
+
+    <test-fixture id="basic">
+      <template>
+        <request-saver></request-saver>
+      </template>
+    </test-fixture>
+
+    <script>
+    /* global fixture, assert, sinon */
+    suite('Save request', function() {
+      var element;
+      var createdId;
+      var createdRev;
+      const projectId = 'test-project-id';
+      const projectName = 'test-project-name';
+      const defaultRequest = {
+        url: 'test-url',
+        method: 'test-method',
+        headers: 'test-headers',
+        payload: '',
+        name: 'test'
+      };
+
+      function db() {
+        return new PouchDB('saved-requests');
+      }
+
+      function dbProjects() {
+        return new PouchDB('legacy-projects');
+      }
+
+      function setCreatedData(result) {
+        createdId = result._id;
+        createdRev = result._rev;
+      }
+
+      suite('Simple save', function() {
+        setup(function() {
+          element = fixture('basic');
+        });
+        teardown(function() {
+          if (createdId) {
+            return db().remove(createdId, createdRev);
+          }
+        });
+
+        suiteTeardown(function() {
+          return db().destroy();
+        });
+
+        test('Creates request object', function() {
+          return element.saveRequest(Object.assign({}, defaultRequest))
+          .then(result => {
+            setCreatedData(result);
+          });
+        });
+
+        test('Generated ID does not contain "undefined"', function() {
+          return element.saveRequest(Object.assign({}, defaultRequest))
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result._id.indexOf('undefined'), -1);
+          });
+        });
+
+        test('Removes pre-existing database meta', function() {
+          var data = Object.assign({}, defaultRequest);
+          const preId = data._id = 'test-_id';
+          const preRev = data._rev = 'test-_rev';
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.notEqual(result._id, preId);
+            assert.notEqual(result._rev, preRev);
+          });
+        });
+
+        test('Removes pre-existing project ID', function() {
+          var data = Object.assign({}, defaultRequest);
+          data.legacyProject = 'test-projectid';
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.isUndefined(result.preProjectId);
+          });
+        });
+
+        test('Removes pre-existing Drive ID', function() {
+          var data = Object.assign({}, defaultRequest);
+          data.driveId = 'test-driveId';
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.isUndefined(result.driveId);
+          });
+        });
+
+        test('Fires request-saved custom event', function() {
+          var data = Object.assign({}, defaultRequest);
+          var spy = sinon.spy();
+          element.addEventListener('request-saved', spy);
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.isTrue(spy.calledOnce);
+          });
+        });
+
+        test('request-saved custom event contains request', function() {
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('request-saved', callback);
+            eventData = e.detail.request;
+          };
+          element.addEventListener('request-saved', callback);
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.typeOf(eventData, 'object');
+            assert.ok(eventData._id, 'Request has _id');
+            assert.ok(eventData._rev, 'Request has _rev');
+          });
+        });
+
+        test('request-saved custom event contains override', function() {
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('request-saved', callback);
+            eventData = e.detail.override;
+          };
+          element.addEventListener('request-saved', callback);
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.isFalse(eventData);
+          });
+        });
+
+        test('request-saved custom event contains toDrive', function() {
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('request-saved', callback);
+            eventData = e.detail.toDrive;
+          };
+          element.addEventListener('request-saved', callback);
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.isFalse(eventData);
+          });
+        });
+
+        test('request-saved custom event contains toProject', function() {
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('request-saved', callback);
+            eventData = e.detail.toProject;
+          };
+          element.addEventListener('request-saved', callback);
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.isFalse(eventData);
+          });
+        });
+
+        test('Request type is set', function() {
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.type, 'saved');
+          });
+        });
+      });
+
+      suite('Save to project', function() {
+        setup(function() {
+          element = fixture('basic');
+        });
+        teardown(function() {
+          if (createdId) {
+            return db().remove(createdId, createdRev);
+          }
+        });
+
+        suiteTeardown(function() {
+          return db().destroy()
+          .then(() => dbProjects().destroy());
+        });
+
+        test('Saves with project ID', function() {
+          var opts = {
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+          });
+        });
+
+        test('Updates project ID', function() {
+          var opts = {
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          data.legacyProject = 'error';
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.legacyProject, projectId);
+          });
+        });
+
+        test('Saves with project name', function() {
+          var opts = {
+            projectName: projectName
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+          });
+        });
+
+        test('Updates project ID', function() {
+          var opts = {
+            projectName: projectName
+          };
+          var data = Object.assign({}, defaultRequest);
+          data.legacyProject = 'error';
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.notEqual(result.legacyProject, 'error');
+            assert.typeOf(result.legacyProject, 'string');
+          });
+        });
+
+        test('Fires project-object-changed custom event', function() {
+          var opts = {
+            projectName: projectName
+          };
+          var data = Object.assign({}, defaultRequest);
+          var spy = sinon.spy();
+          element.addEventListener('project-object-changed', spy);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.isTrue(spy.calledOnce);
+          });
+        });
+
+        test('project-object-changed custom event contains project', function() {
+          var opts = {
+            projectName: projectName
+          };
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('project-object-changed', callback);
+            eventData = e.detail.project;
+          };
+          element.addEventListener('project-object-changed', callback);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.typeOf(eventData, 'object');
+            assert.ok(eventData._id, 'Project has _id');
+            assert.ok(eventData._rev, 'Project has _rev');
+          });
+        });
+
+        test('request-saved custom event contains toProject when project name', function() {
+          var opts = {
+            projectName: projectName
+          };
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('request-saved', callback);
+            eventData = e.detail.toProject;
+          };
+          element.addEventListener('request-saved', callback);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.isTrue(eventData);
+          });
+        });
+
+        test('request-saved custom event contains toProject when project ID', function() {
+          var opts = {
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          var eventData;
+          var callback = function(e) {
+            element.removeEventListener('request-saved', callback);
+            eventData = e.detail.toProject;
+          };
+          element.addEventListener('request-saved', callback);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.isTrue(eventData);
+          });
+        });
+
+        test('Request type is set', function() {
+          var opts = {
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.type, 'saved');
+          });
+        });
+      });
+
+      suite('Save to Drive', function() {
+        var driveObserver;
+        setup(function() {
+          element = fixture('basic');
+          driveObserver = function(e) {
+            e.preventDefault();
+            e.detail.result = Promise.resolve({
+              id: 'drive-id'
+            });
+          };
+          document.body.addEventListener('drive-request-save', driveObserver);
+        });
+        teardown(function() {
+          document.body.removeEventListener('drive-request-save', driveObserver);
+          if (createdId) {
+            return db().remove(createdId, createdRev);
+          }
+        });
+
+        suiteTeardown(function() {
+          return db().destroy();
+        });
+
+        test('Saves the request', function() {
+          var opts = {
+            drive: true
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+          });
+        });
+
+        test('Request has driveId', function() {
+          var opts = {
+            drive: true
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.driveId, 'drive-id');
+          });
+        });
+
+        test('Request type is set', function() {
+          var opts = {
+            drive: true
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.type, 'google-drive');
+          });
+        });
+      });
+
+      suite('Save to project and Drive', function() {
+        var driveObserver;
+        setup(function() {
+          element = fixture('basic');
+          driveObserver = function(e) {
+            e.preventDefault();
+            e.detail.result = Promise.resolve({
+              id: 'drive-id'
+            });
+          };
+          document.body.addEventListener('drive-request-save', driveObserver);
+        });
+        teardown(function() {
+          document.body.removeEventListener('drive-request-save', driveObserver);
+          if (createdId) {
+            return db().remove(createdId, createdRev);
+          }
+        });
+
+        suiteTeardown(function() {
+          return db().destroy()
+          .then(() => dbProjects().destroy());
+        });
+
+        test('Saves the request', function() {
+          var opts = {
+            drive: true,
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+          });
+        });
+
+        test('Has project id', function() {
+          var opts = {
+            drive: true,
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.legacyProject, projectId);
+          });
+        });
+
+        test('Has drive id', function() {
+          var opts = {
+            drive: true,
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.driveId, 'drive-id');
+          });
+        });
+
+        test('Request type is set', function() {
+          var opts = {
+            drive: true,
+            projectId: projectId
+          };
+          var data = Object.assign({}, defaultRequest);
+          return element.saveRequest(data, opts)
+          .then(result => {
+            setCreatedData(result);
+            assert.equal(result.type, 'google-drive');
+          });
+        });
+      });
+    });
+    </script>
+
+  </body>
+</html>
