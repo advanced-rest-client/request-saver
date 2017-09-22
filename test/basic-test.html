@@ -12,7 +12,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
-
+    <link rel="import" href="../../arc-demo-helpers/data-generator.html">
     <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
     <link rel="import" href="../request-saver.html">
@@ -26,7 +26,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </test-fixture>
 
     <script>
-    /* global fixture, assert, sinon */
+    /* global fixture, assert, sinon, DataGenerator */
     const requestName = 'name test';
     const url = 'test url';
     const method = 'GET';
@@ -150,6 +150,112 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return element.deleteRequest(createdId)
         .then(() => {
           assert.equal(eventData, createdRev);
+        });
+      });
+    });
+
+    suite('_idChangeRequired()', function() {
+      var element;
+      var request;
+      setup(function() {
+        element = fixture('basic');
+        request = {
+          _id: element._createRequestId(requestName, url, method),
+          name: requestName,
+          url: url,
+          method: method
+        };
+      });
+
+      test('Returns false for the same object', function() {
+        var result = element._idChangeRequired(request);
+        assert.isFalse(result);
+      });
+
+      test('Returns false for naged properties that are not in the ID', function() {
+        request.isDrive = true;
+        request.description = 'test';
+        request.created = 12345678;
+        var result = element._idChangeRequired(request);
+        assert.isFalse(result);
+      });
+
+      test('Returns true when name change', function() {
+        request.name = 'abcd12345';
+        var result = element._idChangeRequired(request);
+        assert.isTrue(result);
+      });
+
+      test('Returns true when url change', function() {
+        request.url = 'abcd12345';
+        var result = element._idChangeRequired(request);
+        assert.isTrue(result);
+      });
+
+      test('Returns true when method change', function() {
+        request.method = 'abcd12345';
+        var result = element._idChangeRequired(request);
+        assert.isTrue(result);
+      });
+    });
+
+    suite('_changeRequestId()', function() {
+      var requests;
+      var projects;
+      var element;
+
+      suiteSetup(function() {
+        return DataGenerator.insertSavedIfNotExists()
+        .then(data => {
+          requests = data.requests;
+          projects = data.projects;
+        });
+      });
+
+      suiteTeardown(function() {
+        return DataGenerator.destroySavedRequestData();
+      });
+
+      setup(function() {
+        element = fixture('basic');
+      });
+
+      test('Do not change ID for the same object', function() {
+        var id = requests[0]._id;
+        return element._changeRequestId(requests[0])
+        .then(function(data) {
+          assert.equal(data._id, id);
+        });
+      });
+
+      test('request-object-deleted is not fired', function() {
+        var spy = sinon.spy();
+        element.addEventListener('request-object-deleted', spy);
+        return element._changeRequestId(requests[0])
+        .then(function() {
+          assert.isFalse(spy.called);
+        });
+      });
+
+      test('Changes ID for the name change', function() {
+        var update = Object.assign({}, requests[0]);
+        var id = update._id;
+        update.name = 'abc12345';
+        return element._changeRequestId(update)
+        .then(function(data) {
+          assert.notEqual(data._id, id);
+        });
+      });
+
+      test('request-object-deleted is fired', function() {
+        var update = Object.assign({}, requests[1]);
+        update.name = 'abc12345';
+
+        var spy = sinon.spy();
+        element.addEventListener('request-object-deleted', spy);
+        return element._changeRequestId(update)
+        .then(function() {
+          assert.isTrue(spy.called);
         });
       });
     });
