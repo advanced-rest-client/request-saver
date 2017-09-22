@@ -302,17 +302,17 @@ prints warning mesage to the console and continue process.
       var updateId = projectChanged;
       var idParts = data._id.split('/');
       if (!updateId) {
-        let newName = encodeURIComponent(data.name);
-        let oldName = idParts[0];
+        let newName = encodeURIComponent(data.name).toLowerCase();
+        let oldName = idParts[0].toLowerCase();
         updateId = oldName !== newName;
       }
       if (!updateId) {
-        let newUrl = encodeURIComponent(data.url);
-        let oldUrl = idParts[1];
+        let newUrl = encodeURIComponent(data.url).toLowerCase();
+        let oldUrl = idParts[1].toLowerCase();
         updateId = newUrl !== oldUrl;
       }
       if (!updateId) {
-        updateId = data.method !== idParts[2];
+        updateId = data.method.toLowerCase() !== idParts[2].toLowerCase();
       }
       if (!updateId) {
         return Promise.resolve(data);
