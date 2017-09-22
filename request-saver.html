@@ -369,8 +369,11 @@ prints warning mesage to the console and continue process.
           return data;
         });
     },
-
+    // Generates a saved request datastore ID
     _createRequestId: function(name, url, method, projectId) {
+      name = name.toLowerCase();
+      url = url.toLowerCase();
+      method = method.toLowerCase();
       var id = encodeURIComponent(name);
       id += '/' + encodeURIComponent(url);
       id += '/' + method;
