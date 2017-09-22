@@ -221,7 +221,8 @@ prints warning mesage to the console and continue process.
           this.fire('request-object-changed', {
             request: data,
             oldRev: originalRev || oldRev || data._rev,
-            oldId: originalId || data._id
+            oldId: originalId || data._id,
+            type: 'saved-requests'
           });
           return data;
         });
@@ -287,6 +288,34 @@ prints warning mesage to the console and continue process.
         });
     },
     /**
+     * Tests if request ID should change based on the properties that are part of the
+     * request ID.
+     *
+     * It returns true if name, method or the URL has changed and are not set in
+     * existing ID.
+     *
+     * @param {Object} data Request object.
+     * @return {Boolean} True if the ID if the request should be regenerated.
+     */
+    _idChangeRequired: function(data) {
+      var idParts = data._id.split('/');
+      var newName = encodeURIComponent(data.name).toLowerCase();
+      var oldName = idParts[0].toLowerCase();
+      if (oldName !== newName) {
+        return true;
+      }
+      var newUrl = encodeURIComponent(data.url).toLowerCase();
+      var oldUrl = idParts[1].toLowerCase();
+      if (newUrl !== oldUrl) {
+        return true;
+      }
+      if (data.method.toLowerCase() !== idParts[2].toLowerCase()) {
+        return true;
+      }
+      return false;
+    },
+
+    /**
      * Checks if request ID has to be changed. If the change is required then
      * it removes the object from the datastore and upodates the `data` object
      * with new ID.
@@ -298,25 +327,10 @@ prints warning mesage to the console and continue process.
      * @return {Promise} A promise resolved to the request object.
      */
     _changeRequestId: function(data, projectChanged) {
-      var updateId = projectChanged;
-      var idParts = data._id.split('/');
-      if (!updateId) {
-        let newName = encodeURIComponent(data.name);
-        let oldName = idParts[0];
-        updateId = oldName !== newName;
-      }
-      if (!updateId) {
-        let newUrl = encodeURIComponent(data.url);
-        let oldUrl = idParts[1];
-        updateId = newUrl !== oldUrl;
-      }
-      if (!updateId) {
-        updateId = data.method !== idParts[2];
-      }
+      var updateId = projectChanged ? true : this._idChangeRequired(data);
       if (!updateId) {
         return Promise.resolve(data);
       }
-
       return this.deleteRequest(data._id)
         .then(() => {
           data._id = this._createRequestId(data.name, data.url, data.method, data.legacyProject);
@@ -368,8 +382,11 @@ prints warning mesage to the console and continue process.
           return data;
         });
     },
-
+    // Generates a saved request datastore ID
     _createRequestId: function(name, url, method, projectId) {
+      name = name.toLowerCase();
+      url = url.toLowerCase();
+      method = method.toLowerCase();
       var id = encodeURIComponent(name);
       id += '/' + encodeURIComponent(url);
       id += '/' + method;
@@ -400,7 +417,7 @@ prints warning mesage to the console and continue process.
             data.legacyProject = project._id;
             return data;
           });
-      } else if (data.legacyProject) {
+      } else if (data.legacyProject && !opts.projectId) {
         projectChanged = true;
         delete data.legacyProject;
       }
