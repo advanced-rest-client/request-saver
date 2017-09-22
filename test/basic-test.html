@@ -65,6 +65,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var id = element._createRequestId(requestName, url, method, project);
         assert.equal(id.indexOf('undefined'), -1);
       });
+
+      test('Generated ID is lowercase', function() {
+          var result = element._createRequestId('TEST-NAME', 'HTTP://domain.com', 'GET',
+            'TEST-project');
+          var parts = result.split('/');
+          assert.equal(parts[0], 'test-name', 'Name is lowercase');
+          assert.equal(parts[1], 'http%3A%2F%2Fdomain.com', 'URL is lowercase');
+          assert.equal(parts[2], 'get', 'Method is lowercase');
+          assert.equal(parts[3], 'TEST-project', 'Project ID is not lowercased');
+        });
     });
 
     function db() {
