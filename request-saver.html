@@ -404,7 +404,7 @@ prints warning mesage to the console and continue process.
             data.legacyProject = project._id;
             return data;
           });
-      } else if (data.legacyProject) {
+      } else if (data.legacyProject && !opts.projectId) {
         projectChanged = true;
         delete data.legacyProject;
       }
