@@ -221,7 +221,8 @@ prints warning mesage to the console and continue process.
           this.fire('request-object-changed', {
             request: data,
             oldRev: originalRev || oldRev || data._rev,
-            oldId: originalId || data._id
+            oldId: originalId || data._id,
+            type: 'saved-requests'
           });
           return data;
         });
