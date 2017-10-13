@@ -248,7 +248,8 @@ prints warning mesage to the console and continue process.
           let returnData = {
             id: result.id,
             rev: result.rev,
-            oldRev: rev
+            oldRev: rev,
+            type: 'saved-requests'
           };
           this.fire('request-object-deleted', returnData, {
             composed: true
