@@ -1,3 +1,13 @@
+<a name="0.1.3"></a>
+## [0.1.3](https://github.com/advanced-rest-client/request-saver/compare/0.1.2...0.1.3) (2017-10-13)
+
+
+### Fix
+
+* Adding type to request deleted event ([9b11832db840da8d7f962bb747b346ec00d85f11](https://github.com/advanced-rest-client/request-saver/commit/9b11832db840da8d7f962bb747b346ec00d85f11))
+
+
+
 <a name="0.1.2"></a>
 ## [0.1.2](https://github.com/advanced-rest-client/request-saver/compare/0.1.1...0.1.2) (2017-09-23)
 
