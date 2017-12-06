@@ -366,22 +366,26 @@ prints warning mesage to the console and continue process.
       // Always sets request type to "saved"
       data.type = 'saved';
 
-      return this._requestProjectSetup(data, opts)
-        .then(data => this._saveGoogleDrive(data.data, opts))
-        .then(data => {
-          data._id = this._createRequestId(data.name, data.url, data.method, data.legacyProject);
-          return this.updateRequest(data);
-        })
-        .then(data => {
-          this.fire('request-saved', {
-            request: data,
-            override: false,
-            toDrive: !!opts.drive,
-            toProject: !!(opts.projectId || opts.projectName)
-          });
-
-          return data;
+      return this._preparePayload(data)
+      .then(result => {
+        data = result;
+        return this._requestProjectSetup(data, opts);
+      })
+      .then(data => this._saveGoogleDrive(data.data, opts))
+      .then(data => {
+        data._id = this._createRequestId(data.name, data.url, data.method, data.legacyProject);
+        return this.updateRequest(data);
+      })
+      .then(data => {
+        this.fire('request-saved', {
+          request: data,
+          override: false,
+          toDrive: !!opts.drive,
+          toProject: !!(opts.projectId || opts.projectName)
         });
+
+        return data;
+      });
     },
     // Generates a saved request datastore ID
     _createRequestId: function(name, url, method, projectId) {
@@ -468,14 +472,119 @@ prints warning mesage to the console and continue process.
       }
 
       return event.detail.result
-        .then(insertResult => {
-          var driveId = insertResult.id;
-          if (driveId) {
-            data.driveId = driveId;
-            data.type = 'google-drive';
-          }
+      .then(insertResult => {
+        var driveId = insertResult.id;
+        if (driveId) {
+          data.driveId = driveId;
+          data.type = 'google-drive';
+        }
+        return data;
+      });
+    },
+    /**
+     * Prepares payload data to be stored in the datastore.
+     * FormData are translated to a `multipart` entry property.
+     * Payload is cleared from the request object.
+     *
+     * @param {Object} request The request object.
+     * @return {Promise} Promise resolved to a request object.
+     */
+    _preparePayload: function(data) {
+      if (!data.payload) {
+        return Promise.resolve(data);
+      }
+      if (data.payload instanceof FormData) {
+        if (!data.payload.entries) {
+          data.payload = undefined;
+          return Promise.resolve(data);
+        }
+        return this._createMultipartEntry(data.payload)
+        .then(entry => {
+          data.payload = undefined;
+          data.multipart = entry;
           return data;
         });
+      } else if (data.payload instanceof Blob) {
+        return this._blobToString(data.payload)
+        .then(str => {
+          data.payload = undefined;
+          data.blob = str;
+          return data;
+        });
+      }
+      return Promise.resolve(data);
+    },
+    /**
+     * Computes `multipart` list value to replace FormData with array that can
+     * be stored in the datastore.
+     *
+     * @param {FormData} payload FormData object
+     * @return {Promise} Promise resolved to a form part representation.
+     */
+    _createMultipartEntry: function(payload) {
+      var iterator = payload.entries();
+      return this._computeFormDataEntry(iterator);
+    },
+    /**
+     * Recuresively iterates over form data and appends result of creating the
+     * part object to the `result` array.
+     *
+     * Each part entry contains `name` as a form part name, value as a string
+     * representation of the value and `isFile` to determine is the value is
+     * acttually a string or a file data.
+     *
+     * @param {Iterator} iterator FormData iterator
+     * @param {?Array<Object>} result An array where the results are appended to.
+     * It creates new result object when it's not passed.
+     * @return {Promise} A promise resolved to the `result` array.
+     */
+    _computeFormDataEntry: function(iterator, result) {
+      result = result || [];
+      var item = iterator.next();
+      if (item.done) {
+        return Promise.resolve(result);
+      }
+      var entry = item.value;
+      var name = entry[0];
+      var value = entry[1];
+      var promise;
+      var isBlob = false;
+      if (value instanceof Blob) {
+        promise = this._blobToString(value);
+        isBlob = true;
+      } else {
+        promise = Promise.resolve(value);
+      }
+      return promise
+      .then(str => {
+        return {
+          name: name,
+          value: str,
+          isFile: isBlob
+        };
+      })
+      .then(part => {
+        result.push(part);
+        return this._computeFormDataEntry(iterator, result);
+      });
+    },
+    /**
+     * Converts blob data to base64 string.
+     *
+     * @param {Blob} blob File or blob object to be translated to string
+     * @return {Promise} Promise resolved to a base64 string data from the file.
+     */
+    _blobToString: function(blob) {
+      return new Promise((resolve, reject) => {
+        let reader = new FileReader();
+        reader.onloadend = function(e) {
+          resolve(e.target.result);
+        };
+        reader.onerror = function() {
+          reject(new Error('Unable to convert blob to string.'));
+        };
+        reader.readAsDataURL(blob);
+      });
     }
   });
   </script>
