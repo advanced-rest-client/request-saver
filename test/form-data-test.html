@@ -17,7 +17,11 @@
     </test-fixture>
 
     <script>
-    /* global fixture, assert */
+    /* global fixture, assert, TestHelpers */
+
+    function isNotMsProduc() {
+      return !navigator.userAgent.match(/Edge/i);
+    }
     suite('Save request with form data', function() {
       var element;
       var createdId;
@@ -73,15 +77,17 @@
           });
         });
 
-        test('Created entry contains multipart property', function() {
+        test('Created entry contains multipart property',
+          TestHelpers.skipUnless(isNotMsProduc, function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
           .then(result => {
             setCreatedData(result);
             assert.typeOf(result.multipart, 'array');
           });
-        });
+        }));
 
-        test('Contains text entry', function() {
+        test('Contains text entry',
+          TestHelpers.skipUnless(isNotMsProduc, function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
           .then(result => {
             setCreatedData(result);
@@ -89,9 +95,10 @@
             assert.equal(result.multipart[0].name, 'test');
             assert.typeOf(result.multipart[0].value, 'string');
           });
-        });
+        }));
 
-        test('Contains file entry', function() {
+        test('Contains file entry',
+          TestHelpers.skipUnless(isNotMsProduc, function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
           .then(result => {
             setCreatedData(result);
@@ -99,7 +106,7 @@
             assert.equal(result.multipart[1].name, 'file');
             assert.typeOf(result.multipart[1].value, 'string');
           });
-        });
+        }));
       });
     });
 
