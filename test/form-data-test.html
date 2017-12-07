@@ -6,6 +6,7 @@
 
     <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
+    <script src="../../iron-test-helpers/test-helpers.js"></script>
     <link rel="import" href="../request-saver.html">
   </head>
   <body>
@@ -77,17 +78,21 @@
           });
         });
 
-        test('Created entry contains multipart property',
-          TestHelpers.skipUnless(isNotMsProduc, function() {
+        test('Created entry contains multipart property', function() {
+          if (!isNotMsProduc()) {
+            return;
+          }
           return element.saveRequest(Object.assign({}, defaultRequest))
           .then(result => {
             setCreatedData(result);
             assert.typeOf(result.multipart, 'array');
           });
-        }));
+        });
 
-        test('Contains text entry',
-          TestHelpers.skipUnless(isNotMsProduc, function() {
+        test('Contains text entry', function() {
+          if (!isNotMsProduc()) {
+            return;
+          }
           return element.saveRequest(Object.assign({}, defaultRequest))
           .then(result => {
             setCreatedData(result);
@@ -95,10 +100,12 @@
             assert.equal(result.multipart[0].name, 'test');
             assert.typeOf(result.multipart[0].value, 'string');
           });
-        }));
+        });
 
-        test('Contains file entry',
-          TestHelpers.skipUnless(isNotMsProduc, function() {
+        test('Contains file entry', function() {
+          if (!isNotMsProduc()) {
+            return;
+          }
           return element.saveRequest(Object.assign({}, defaultRequest))
           .then(result => {
             setCreatedData(result);
@@ -106,7 +113,7 @@
             assert.equal(result.multipart[1].name, 'file');
             assert.typeOf(result.multipart[1].value, 'string');
           });
-        }));
+        });
       });
     });
 
