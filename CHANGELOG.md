@@ -1,3 +1,18 @@
+<a name="0.1.5"></a>
+## [0.1.5](https://github.com/advanced-rest-client/request-saver/compare/0.1.4...0.1.5) (2017-12-07)
+
+
+### Fix
+
+* Fixed tests ([927061bca06cb42ff8e2edf9bb27ad43c9a364af](https://github.com/advanced-rest-client/request-saver/commit/927061bca06cb42ff8e2edf9bb27ad43c9a364af))
+* Fixes https://github.com/jarrodek/ChromeRestClient/issues/1109 ([10fadde49bb1956e4ae572db3ea7fababf725f35](https://github.com/advanced-rest-client/request-saver/commit/10fadde49bb1956e4ae572db3ea7fababf725f35))
+
+### Update
+
+* skipping tests for edge anf form data ([2ee091ccda98ec8f4b1b2789b5f7c7f83209f742](https://github.com/advanced-rest-client/request-saver/commit/2ee091ccda98ec8f4b1b2789b5f7c7f83209f742))
+
+
+
 <a name="0.1.4"></a>
 ## [0.1.4](https://github.com/advanced-rest-client/request-saver/compare/0.1.3...0.1.4) (2017-10-13)
 
