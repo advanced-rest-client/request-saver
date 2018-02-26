@@ -494,19 +494,21 @@ prints warning mesage to the console and continue process.
         return Promise.resolve(data);
       }
       if (data.payload instanceof FormData) {
+        data = Object.assign({}, data);
         if (!data.payload.entries) {
           data.payload = undefined;
           return Promise.resolve(data);
         }
         return this._createMultipartEntry(data.payload)
-        .then(entry => {
+        .then((entry) => {
           data.payload = undefined;
           data.multipart = entry;
           return data;
         });
       } else if (data.payload instanceof Blob) {
+        data = Object.assign({}, data);
         return this._blobToString(data.payload)
-        .then(str => {
+        .then((str) => {
           data.payload = undefined;
           data.blob = str;
           return data;
@@ -522,8 +524,12 @@ prints warning mesage to the console and continue process.
      * @return {Promise} Promise resolved to a form part representation.
      */
     _createMultipartEntry: function(payload) {
-      var iterator = payload.entries();
-      return this._computeFormDataEntry(iterator);
+      let iterator = payload.entries();
+      let textParts;
+      if (payload._arcMeta && payload._arcMeta.textParts) {
+        textParts = payload._arcMeta.textParts;
+      }
+      return this._computeFormDataEntry(iterator, textParts);
     },
     /**
      * Recuresively iterates over form data and appends result of creating the
@@ -534,38 +540,50 @@ prints warning mesage to the console and continue process.
      * acttually a string or a file data.
      *
      * @param {Iterator} iterator FormData iterator
+     * @param {?Array<String>} textParts From `_arcMeta` property. List of blobs
+     * that should be treated as text parts.
      * @param {?Array<Object>} result An array where the results are appended to.
      * It creates new result object when it's not passed.
      * @return {Promise} A promise resolved to the `result` array.
      */
-    _computeFormDataEntry: function(iterator, result) {
+    _computeFormDataEntry: function(iterator, textParts, result) {
       result = result || [];
       var item = iterator.next();
       if (item.done) {
         return Promise.resolve(result);
       }
-      var entry = item.value;
-      var name = entry[0];
-      var value = entry[1];
-      var promise;
-      var isBlob = false;
+      let entry = item.value;
+      let name = entry[0];
+      let value = entry[1];
+      let promise;
+      let isBlob = false;
+      let isTextBlob = false;
       if (value instanceof Blob) {
         promise = this._blobToString(value);
-        isBlob = true;
+        if (textParts && textParts.indexOf(name) !== -1) {
+          isBlob = false;
+          isTextBlob = true;
+        } else {
+          isBlob = true;
+        }
       } else {
         promise = Promise.resolve(value);
       }
       return promise
       .then(str => {
-        return {
+        let _part = {
           name: name,
           value: str,
           isFile: isBlob
         };
+        if (isTextBlob) {
+          _part.isTextBlob = isTextBlob;
+        }
+        return _part;
       })
       .then(part => {
         result.push(part);
-        return this._computeFormDataEntry(iterator, result);
+        return this._computeFormDataEntry(iterator, textParts, result);
       });
     },
     /**

@@ -1,3 +1,13 @@
+<a name="0.1.7"></a>
+## [0.1.7](https://github.com/advanced-rest-client/request-saver/compare/0.1.6...0.1.7) (2018-02-26)
+
+
+### Update
+
+* Updated multipart save ([3d63aad638d628405103d3f795fdfeca29d4dbb0](https://github.com/advanced-rest-client/request-saver/commit/3d63aad638d628405103d3f795fdfeca29d4dbb0))
+
+
+
 <a name="0.1.6"></a>
 ## [0.1.6](https://github.com/advanced-rest-client/request-saver/compare/0.1.5...0.1.6) (2017-12-07)
 
