@@ -1,19 +1,10 @@
 <!doctype html>
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
--->
 <html>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
-    <link rel="import" href="../../arc-demo-helpers/data-generator.html">
-    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <link rel="import" href="../../arc-data-generator/arc-data-generator.html">
+    <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
     <link rel="import" href="../request-saver.html">
   </head>
@@ -26,50 +17,50 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </test-fixture>
 
     <script>
-    /* global fixture, assert, sinon, DataGenerator */
+    /* global DataGenerator */
     const requestName = 'name test';
     const url = 'test url';
     const method = 'GET';
     const project = 'test-project';
 
     suite('_createRequestId()', function() {
-      var element;
+      let element;
       setup(function() {
         element = fixture('basic');
       });
 
       test('creates request ID', function() {
-        var id = element._createRequestId(requestName, url, method);
+        const id = element._createRequestId(requestName, url, method);
         assert.typeOf(id, 'string');
       });
 
       test('ID has 3 parts', function() {
-        var id = element._createRequestId(requestName, url, method);
-        var parts = id.split('/');
+        const id = element._createRequestId(requestName, url, method);
+        const parts = id.split('/');
         assert.lengthOf(parts, 3);
       });
 
       test('Parts are url encoded', function() {
-        var id = element._createRequestId(requestName, url, method);
-        var parts = id.split('/');
+        const id = element._createRequestId(requestName, url, method);
+        const parts = id.split('/');
         assert.equal(parts[0].indexOf(' '), -1);
       });
 
       test('ID has 4 parts with project', function() {
-        var id = element._createRequestId(requestName, url, method, project);
-        var parts = id.split('/');
+        const id = element._createRequestId(requestName, url, method, project);
+        const parts = id.split('/');
         assert.lengthOf(parts, 4);
       });
 
       test('There is not "undefined" in the id', function() {
-        var id = element._createRequestId(requestName, url, method, project);
+        const id = element._createRequestId(requestName, url, method, project);
         assert.equal(id.indexOf('undefined'), -1);
       });
 
       test('Generated ID is lowercase', function() {
-          var result = element._createRequestId('TEST-NAME', 'HTTP://domain.com', 'GET',
+          const result = element._createRequestId('TEST-NAME', 'HTTP://domain.com', 'GET',
             'TEST-project');
-          var parts = result.split('/');
+          const parts = result.split('/');
           assert.equal(parts[0], 'test-name', 'Name is lowercase');
           assert.equal(parts[1], 'http%3A%2F%2Fdomain.com', 'URL is lowercase');
           assert.equal(parts[2], 'get', 'Method is lowercase');
@@ -78,23 +69,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     });
 
     function db() {
+      /* global PouchDB */
       return new PouchDB('saved-requests');
     }
 
     suite('deleteRequest()', function() {
-      var element;
-      var createdId;
-      var createdRev;
+      let element;
+      let createdId;
+      let createdRev;
       setup(function() {
         element = fixture('basic');
-        var data = {
+        const data = {
           _id: element._createRequestId(requestName, url, method) + Date.now(),
           name: requestName,
           url: url,
           method: method
         };
         return db().put(data)
-        .then(result => {
+        .then((result) => {
           createdId = result.id;
           createdRev = result.rev;
         });
@@ -105,7 +97,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('Fires request-object-deleted custom event', function() {
-        var spy = sinon.spy();
+        const spy = sinon.spy();
         element.addEventListener('request-object-deleted', spy);
         return element.deleteRequest(createdId)
         .then(() => {
@@ -114,12 +106,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('request-object-deleted custom event contains ID', function() {
-        var eventData;
-        var callback = function(e) {
-          element.removeEventListener('request-object-deleted', callback);
+        let eventData;
+        element.addEventListener('request-object-deleted', function clb(e) {
+          element.removeEventListener('request-object-deleted', clb);
           eventData = e.detail.id;
-        };
-        element.addEventListener('request-object-deleted', callback);
+        });
         return element.deleteRequest(createdId)
         .then(() => {
           assert.equal(eventData, createdId);
@@ -127,12 +118,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('request-object-deleted custom event contains rev', function() {
-        var eventData;
-        var callback = function(e) {
-          element.removeEventListener('request-object-deleted', callback);
+        let eventData;
+        element.addEventListener('request-object-deleted', function clb(e) {
+          element.removeEventListener('request-object-deleted', clb);
           eventData = e.detail.rev;
-        };
-        element.addEventListener('request-object-deleted', callback);
+        });
         return element.deleteRequest(createdId)
         .then(() => {
           assert.typeOf(eventData, 'string');
@@ -141,12 +131,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('request-object-deleted custom event contains oldRev', function() {
-        var eventData;
-        var callback = function(e) {
-          element.removeEventListener('request-object-deleted', callback);
+        let eventData;
+        element.addEventListener('request-object-deleted', function clb(e) {
+          element.removeEventListener('request-object-deleted', clb);
           eventData = e.detail.oldRev;
-        };
-        element.addEventListener('request-object-deleted', callback);
+        });
         return element.deleteRequest(createdId)
         .then(() => {
           assert.equal(eventData, createdRev);
@@ -155,8 +144,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     });
 
     suite('_idChangeRequired()', function() {
-      var element;
-      var request;
+      let element;
+      let request;
       setup(function() {
         element = fixture('basic');
         request = {
@@ -168,7 +157,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('Returns false for the same object', function() {
-        var result = element._idChangeRequired(request);
+        const result = element._idChangeRequired(request);
         assert.isFalse(result);
       });
 
@@ -176,37 +165,37 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         request.isDrive = true;
         request.description = 'test';
         request.created = 12345678;
-        var result = element._idChangeRequired(request);
+        const result = element._idChangeRequired(request);
         assert.isFalse(result);
       });
 
       test('Returns true when name change', function() {
         request.name = 'abcd12345';
-        var result = element._idChangeRequired(request);
+        const result = element._idChangeRequired(request);
         assert.isTrue(result);
       });
 
       test('Returns true when url change', function() {
         request.url = 'abcd12345';
-        var result = element._idChangeRequired(request);
+        const result = element._idChangeRequired(request);
         assert.isTrue(result);
       });
 
       test('Returns true when method change', function() {
         request.method = 'abcd12345';
-        var result = element._idChangeRequired(request);
+        const result = element._idChangeRequired(request);
         assert.isTrue(result);
       });
     });
 
     suite('_changeRequestId()', function() {
-      var requests;
-      var projects;
-      var element;
+      let requests;
+      let projects;
+      let element;
 
       suiteSetup(function() {
         return DataGenerator.insertSavedIfNotExists()
-        .then(data => {
+        .then((data) => {
           requests = data.requests;
           projects = data.projects;
         });
@@ -221,7 +210,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('Do not change ID for the same object', function() {
-        var id = requests[0]._id;
+        const id = requests[0]._id;
         return element._changeRequestId(requests[0])
         .then(function(data) {
           assert.equal(data._id, id);
@@ -229,7 +218,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('request-object-deleted is not fired', function() {
-        var spy = sinon.spy();
+        const spy = sinon.spy();
         element.addEventListener('request-object-deleted', spy);
         return element._changeRequestId(requests[0])
         .then(function() {
@@ -238,8 +227,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('Changes ID for the name change', function() {
-        var update = Object.assign({}, requests[0]);
-        var id = update._id;
+        const update = Object.assign({}, requests[0]);
+        const id = update._id;
         update.name = 'abc12345';
         return element._changeRequestId(update)
         .then(function(data) {
@@ -248,10 +237,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       test('request-object-deleted is fired', function() {
-        var update = Object.assign({}, requests[1]);
+        const update = Object.assign({}, requests[1]);
         update.name = 'abc12345';
 
-        var spy = sinon.spy();
+        const spy = sinon.spy();
         element.addEventListener('request-object-deleted', spy);
         return element._changeRequestId(update)
         .then(function() {

@@ -1,19 +1,9 @@
 <!doctype html>
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
--->
 <html>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
-
-    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
     <link rel="import" href="../request-saver.html">
   </head>
@@ -26,12 +16,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </test-fixture>
 
     <script>
-    /* global fixture, assert */
+    /* global PouchDB */
     suite('Override request', function() {
-      var element;
-      var createdId;
-      var createdRev;
-      var createdRequest;
+      let element;
+      let createdId;
+      let createdRev;
+      let createdRequest;
 
       const requestName = 'name test';
       const url = 'test url';
@@ -49,9 +39,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       function createRequestObject(includeProject) {
-        var _project = includeProject ? project : undefined;
-        var id = element._createRequestId(requestName, url, method, _project);
-        var data = {
+        const _project = includeProject ? project : undefined;
+        const id = element._createRequestId(requestName, url, method, _project);
+        const data = {
           _id: id + '/' + Date.now(),
           name: requestName,
           url: url,
@@ -62,7 +52,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           data.legacyProject = project;
         }
         return db().put(data)
-        .then(result => {
+        .then((result) => {
           createdId = result.id;
           createdRev = result.rev;
           createdRequest = data;
@@ -91,7 +81,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           const copy = Object.assign({}, createdRequest);
           copy.headers = newHeaders;
           return element.overrideRequest(copy)
-          .then(result => {
+          .then((result) => {
             assert.equal(result.headers, newHeaders);
             createdRev = result._rev;
           });
@@ -102,7 +92,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           const copy = Object.assign({}, createdRequest);
           copy.headers = newHeaders;
           return element.overrideRequest(copy)
-          .then(result => {
+          .then((result) => {
             assert.equal(result._id, origId);
             createdRev = result._rev;
           });
@@ -113,7 +103,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           const copy = Object.assign({}, createdRequest);
           const newName = copy.name = 'updated';
           return element.overrideRequest(copy)
-          .then(result => {
+          .then((result) => {
             assert.notEqual(result._id, origId);
             assert.equal(result.name, newName, 'Has new name');
             assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
@@ -127,7 +117,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           const copy = Object.assign({}, createdRequest);
           copy.method = 'HEAD';
           return element.overrideRequest(copy)
-          .then(result => {
+          .then((result) => {
             assert.notEqual(result._id, origId, 'Has new ID');
             assert.equal(result.method, 'HEAD', 'Has new method');
             assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
@@ -141,7 +131,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           const copy = Object.assign({}, createdRequest);
           const newUrl = copy.url = 'http://mulesoft.com';
           return element.overrideRequest(copy)
-          .then(result => {
+          .then((result) => {
             assert.notEqual(result._id, origId, 'Has new ID');
             assert.equal(result.url, newUrl, 'Has new url');
             assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
@@ -175,7 +165,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             projectId: 'new-project'
           };
           return element.overrideRequest(copy, opts)
-          .then(result => {
+          .then((result) => {
             assert.notEqual(result._id, origId, 'Has new ID');
             assert.equal(result.legacyProject, opts.projectId, 'Has new project ID');
             assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');
@@ -189,7 +179,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           const copy = Object.assign({}, createdRequest);
           const opts = {};
           return element.overrideRequest(copy, opts)
-          .then(result => {
+          .then((result) => {
             assert.notEqual(result._id, origId, 'Has new ID');
             assert.isUndefined(result.legacyProject, 'Project ID is cleared');
             assert.equal(result._id.indexOf('undefined'), -1, 'No undefined in the ID');

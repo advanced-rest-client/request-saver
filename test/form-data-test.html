@@ -3,10 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
-
-    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
-    <script src="../../iron-test-helpers/test-helpers.js"></script>
     <link rel="import" href="../request-saver.html">
   </head>
   <body>
@@ -18,15 +16,14 @@
     </test-fixture>
 
     <script>
-    /* global fixture, assert, TestHelpers */
-
+    /* global PouchDB */
     function isNotMsProduc() {
       return !navigator.userAgent.match(/Edge/i);
     }
     suite('Save request with form data', function() {
-      var element;
-      var createdId;
-      var createdRev;
+      let element;
+      let createdId;
+      let createdRev;
       const defaultRequest = {
         url: 'test-url',
         method: 'test-method',
@@ -65,14 +62,14 @@
 
         test('Creates request object', function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
           });
         });
 
         test('Created entry\'s payload is cleared', function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             assert.isUndefined(result.payload);
           });
@@ -83,7 +80,7 @@
             return;
           }
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             assert.typeOf(result.multipart, 'array');
           });
@@ -94,7 +91,7 @@
             return;
           }
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             assert.isFalse(result.multipart[0].isFile);
             assert.equal(result.multipart[0].name, 'test');
@@ -107,7 +104,7 @@
             return;
           }
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             assert.isTrue(result.multipart[1].isFile);
             assert.equal(result.multipart[1].name, 'file');
@@ -118,9 +115,9 @@
     });
 
     suite('Save request with File data', function() {
-      var element;
-      var createdId;
-      var createdRev;
+      let element;
+      let createdId;
+      let createdRev;
       const defaultRequest = {
         url: 'test-url',
         method: 'test-method',
@@ -139,14 +136,16 @@
       }
 
       suite('Simple save', function() {
+
         setup(function() {
           element = fixture('basic');
-          var b = new Blob(['a'], {
+          const b = new Blob(['a'], {
             type: 'application/x-test'
           });
           b.name = 'test.txt'; //mimics file object
           defaultRequest.payload = b;
         });
+
         teardown(function() {
           if (createdId) {
             return db().remove(createdId, createdRev);
@@ -159,14 +158,14 @@
 
         test('Creates request object', function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
           });
         });
 
         test('Created entry\'s payload is cleared', function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             assert.isUndefined(result.payload);
           });
@@ -174,18 +173,18 @@
 
         test('Created entry contains blob property', function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             assert.typeOf(result.blob, 'string');
           });
         });
 
         function dataURLtoBlob(dataurl) {
-          var arr = dataurl.split(',');
-          var mime = arr[0].match(/:(.*?);/)[1];
-          var bstr = atob(arr[1]);
-          var n = bstr.length;
-          var u8arr = new Uint8Array(n);
+          const arr = dataurl.split(',');
+          const mime = arr[0].match(/:(.*?);/)[1];
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
           while (n--) {
             u8arr[n] = bstr.charCodeAt(n);
           }
@@ -194,7 +193,7 @@
 
         test('Blob entry can be restored', function() {
           return element.saveRequest(Object.assign({}, defaultRequest))
-          .then(result => {
+          .then((result) => {
             setCreatedData(result);
             var blob = dataURLtoBlob(result.blob);
             assert.equal(blob.size, defaultRequest.payload.size);
