@@ -17,8 +17,11 @@
 
     <script>
     /* global PouchDB */
-    function isNotMsProduc() {
-      return !navigator.userAgent.match(/Edge/i);
+    function hasFormDataSupport() {
+      const fd = new FormData();
+      if (!('entries' in fd)) {
+        return false;
+      }
     }
     suite('Save request with form data', function() {
       let element;
@@ -76,7 +79,7 @@
         });
 
         test('Created entry contains multipart property', function() {
-          if (!isNotMsProduc()) {
+          if (!hasFormDataSupport()) {
             return;
           }
           return element.saveRequest(Object.assign({}, defaultRequest))
@@ -87,7 +90,7 @@
         });
 
         test('Contains text entry', function() {
-          if (!isNotMsProduc()) {
+          if (!hasFormDataSupport()) {
             return;
           }
           return element.saveRequest(Object.assign({}, defaultRequest))
@@ -100,7 +103,7 @@
         });
 
         test('Contains file entry', function() {
-          if (!isNotMsProduc()) {
+          if (!hasFormDataSupport()) {
             return;
           }
           return element.saveRequest(Object.assign({}, defaultRequest))
