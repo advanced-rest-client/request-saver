@@ -1,3 +1,9 @@
+<a name="1.0.0"></a>
+# [1.0.0](https://github.com/advanced-rest-client/request-saver/compare/0.1.7...1.0.0) (2018-05-12)
+
+
+
+
 <a name="0.1.8"></a>
 ## [0.1.8](https://github.com/advanced-rest-client/request-saver/compare/0.1.7...0.1.8) (2018-02-26)
 
